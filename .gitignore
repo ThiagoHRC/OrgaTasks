@@ -1,0 +1,21 @@
+# Dependências
+node_modules/
+*.log
+
+# Ambiente
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Prisma
+prisma/migrations/
+
+# Builds
+dist/
+build/
+
+# IDEs e editores
+.vscode/
+.idea/
