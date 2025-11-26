@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate": "cross-env DOTENV_CONFIG_PATH=./.env npx prisma generate",
+    "migrate": "cross-env DOTENV_CONFIG_PATH=./.env npx prisma migrate dev --name init"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +23,7 @@
     "prisma": "^6.18.0"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "nodemon": "^3.1.10"
   }
 }

@@ -21,18 +21,18 @@ model Board {
   title       String
   description String?
   userId      String
+  createdAt   DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id])
   lists       List[]
-  createdAt   DateTime @default(now())
 }
 
 model List {
-  id       String  @id @default(cuid())
+  id       String @id @default(cuid())
   title    String
   boardId  String
-  board    Board   @relation(fields: [boardId], references: [id])
+  position Int    @default(0)
   cards    Card[]
-  position Int     @default(0)  // Para ordem das listas
+  board    Board  @relation(fields: [boardId], references: [id])
 }
 
 model Card {
@@ -40,6 +40,6 @@ model Card {
   title    String
   content  String?
   listId   String
+  position Int     @default(0)
   list     List    @relation(fields: [listId], references: [id])
-  position Int     @default(0)  // Para ordem dos cartões
 }

@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
+const authMiddleware = require('./middleware/authMiddleware');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -11,6 +12,12 @@ app.use(express.json());
 
 // Rotas de autenticação
 app.use('/api/auth', require('./routes/auth'));
+// Rotas de quadros
+app.use('/api/boards', authMiddleware, require('./routes/boards'));
+// Rotas de listas
+app.use('/api/lists', authMiddleware, require('./routes/lists'));
+// Rotas de cartões
+app.use('/api/cards', authMiddleware, require('./routes/cards'));
 
 // Rota de health check (testa API + DB)
 app.get('/health', async (req, res) => {
