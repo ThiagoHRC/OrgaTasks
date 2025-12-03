@@ -98,6 +98,37 @@ router.get('/:listId', async (req, res) => {
   }
 });
 
+// PATCH /api/cards/move - Move card pra outra lista
+router.patch('/move', auth, async (req, res) => {
+  const { cardId, targetListId, targetPosition } = req.body;
+
+  try {
+    // Atualiza listId e posição
+    await prisma.card.update({
+      where: { id: cardId },
+      data: { listId: targetListId, position: targetPosition || 999 }, // 999 = final da lista
+    });
+
+    // Reordena a lista destino (opcional, mas deixa bonitinho)
+    const targetCards = await prisma.card.findMany({
+      where: { listId: targetListId },
+      orderBy: { position: 'asc' },
+    });
+    await Promise.all(
+      targetCards.map((card, index) =>
+        prisma.card.update({
+          where: { id: card.id },
+          data: { position: index },
+        })
+      )
+    );
+
+    res.json({ message: 'Card movido com sucesso' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 
 

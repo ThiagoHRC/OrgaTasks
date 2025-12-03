@@ -19,7 +19,7 @@ const TasksScreen = ({ navigation }) => {
     try {
       const token = await AsyncStorage.getItem('token');
       // Troque o IP abaixo pelo seu IPv4 local
-      const response = await axios.get('http://192.168.1.73:3001/api/boards', { 
+      const response = await axios.get('https://marty-consistorian-untemporally.ngrok-free.dev/api/boards', { 
         headers: { Authorization: `Bearer ${token}` }
       });
       setBoards(response.data);
@@ -32,7 +32,7 @@ const TasksScreen = ({ navigation }) => {
   const createBoard = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      await axios.post('http://192.168.1.73:3001/api/boards', {
+      await axios.post('https://marty-consistorian-untemporally.ngrok-free.dev/api/boards', {
         title: 'Novo Quadro',
         description: 'Adicione listas'
       }, {
@@ -57,7 +57,7 @@ const TasksScreen = ({ navigation }) => {
 
     try {
       const token = await AsyncStorage.getItem('token');
-      await axios.put(`http://192.168.1.73:3001/api/boards/${selectedBoard.id}`, {
+      await axios.put(`https://marty-consistorian-untemporally.ngrok-free.dev/api/boards/${selectedBoard.id}`, {
         title: newTitle,
         description: newDescription
       }, {
@@ -84,7 +84,7 @@ const TasksScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               const token = await AsyncStorage.getItem('token');
-              await axios.delete(`http://192.168.1.73:3001/api/boards/${boardId}`, {
+              await axios.delete(`https://marty-consistorian-untemporally.ngrok-free.dev/api/boards/${boardId}`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
               Alert.alert('Sucesso', 'Quadro excluído!');

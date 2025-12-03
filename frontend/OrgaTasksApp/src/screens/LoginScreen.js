@@ -18,7 +18,7 @@ const LoginScreen = ({ navigation }) => {
       setLoading(true);
 
       // Troque o IP abaixo pelo seu IPv4 local
-      const response = await axios.post('http://192.168.1.73:3001/api/auth/login', {
+      const response = await axios.post('https://marty-consistorian-untemporally.ngrok-free.dev/api/auth/login', {
         email,
         password,
       });

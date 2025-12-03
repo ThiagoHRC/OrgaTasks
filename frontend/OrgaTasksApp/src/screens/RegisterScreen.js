@@ -18,7 +18,7 @@ const RegisterScreen = ({ navigation }) => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://192.168.1.73:3001/api/auth/register', { email, password, name }); // Troque o IP pelo seu IPv4 local
+      const response = await axios.post('https://marty-consistorian-untemporally.ngrok-free.dev/api/auth/register', { email, password, name }); // Troque o IP pelo seu IPv4 local
       await AsyncStorage.setItem('token', response.data.token);
       Alert.alert('Sucesso!', 'Cadastro realizado! Redirecionando...');
       navigation.navigate('Tarefas');
