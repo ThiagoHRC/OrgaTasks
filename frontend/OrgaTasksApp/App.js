@@ -9,6 +9,7 @@ import BoardDetailsScreen from './src/screens/BoardDetailsScreen';
 import { StackScreen } from 'react-native-screens';
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
+import SplashScreen from './src/screens/SplashScreen';
 
 const Stack = createStackNavigator();
 
@@ -16,11 +17,16 @@ export default function App() {
   return (
     <NavigationContainer>
       <StatusBar style="light" backgroundColor="#2196F3" />
-      <Stack.Navigator initialRouteName="Login">
+      <Stack.Navigator initialRouteName="Splash">
+        <Stack.Screen
+          name="Splash"
+          component={SplashScreen}
+          options={{ headerShown: false }}
+        />
         <Stack.Screen
         name="Login"
         component={LoginScreen}
-        options={{ title: 'Login' }}
+        options={{ headerShown: false }}
         />
         <Stack.Screen 
           name="Cadastro" 
@@ -36,7 +42,7 @@ export default function App() {
           name="BoardDetailsScreen"
           component={BoardDetailsScreen}
           options={{ title: 'Detalhes do Quadro' }}
-        />
+        />  
       </Stack.Navigator>
     </NavigationContainer>
   );
