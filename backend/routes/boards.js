@@ -46,17 +46,16 @@ router.put('/:id', async (req, res) => {
   const { title, description } = req.body;
 
   try {
-    const board = await prisma.board.updateMany({
-      where: { id, userId: req.user.id }, // removido Number(id)
+    const updated = await prisma.board.update({
+      where: { id },
       data: { title, description },
     });
 
-    if (!board.count) {
-      return res.status(404).json({ error: 'Board não encontrado' });
-    }
-
-    res.json({ message: 'Board atualizado com sucesso' });
+    res.json(updated);
   } catch (error) {
+    if (error.code === 'P2025') { // Prisma error: record not found
+      return res.status(404).json({ error: 'Quadro não encontrado' });
+    }
     console.error('Erro ao atualizar board:', error);
     res.status(500).json({ error: 'Erro ao atualizar board' });
   }

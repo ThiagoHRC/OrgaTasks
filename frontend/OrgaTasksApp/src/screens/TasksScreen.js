@@ -1,104 +1,80 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Button, FlatList, Alert, StyleSheet, TouchableOpacity, Modal, TextInput } from 'react-native';
+import {View,Text,TouchableOpacity,FlatList,Alert,StyleSheet,Modal,TextInput, KeyboardAvoidingView,Platform} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TasksScreen = ({ navigation }) => {
   const [boards, setBoards] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedBoard, setSelectedBoard] = useState(null);
-  const [newTitle, setNewTitle] = useState('');
-  const [newDescription, setNewDescription] = useState('');
+  const [newBoardTitle, setNewBoardTitle] = useState('');
+  const [newBoardDesc, setNewBoardDesc] = useState('');
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [sekectedBoardId, setSelectedBoardId] = useState(null);
+  const [editModalTitle, setEditModalTitle] = useState('');
+  const [editModalDesc, setEditModalDesc] = useState('');
 
+  const baseURL = 'https://marty-consistorian-untemporally.ngrok-free.dev';
+
+  const fetchBoards = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await axios.get(`${baseURL}/api/boards`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setBoards(res.data);
+    } catch (err) {
+      Alert.alert('Erro', 'Falha ao carregar quadros');
+    }
+  };
 
   useEffect(() => {
     fetchBoards();
   }, []);
 
-  const fetchBoards = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      // Troque o IP abaixo pelo seu IPv4 local
-      const response = await axios.get('https://marty-consistorian-untemporally.ngrok-free.dev/api/boards', { 
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setBoards(response.data);
-    } catch (error) {
-      console.log('Erro ao buscar quadros:', error.response?.data || error.message);
-      Alert.alert('Erro', 'Falha ao carregar quadros');
-    }
-  };
-
   const createBoard = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      await axios.post('https://marty-consistorian-untemporally.ngrok-free.dev/api/boards', {
-        title: 'Novo Quadro',
-        description: 'Adicione listas'
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      Alert.alert('Sucesso!', 'Quadro criado!');
-      fetchBoards();
-    } catch (error) {
-      Alert.alert('Erro', error.response?.data?.error || 'Falha ao criar');
+    if (!newBoardTitle.trim()) {
+      Alert.alert('Erro', 'Dê um nome ao quadro');
+      return;
     }
-  };
-
-  const openEditModal = (board) => {
-    setSelectedBoard(board);
-    setNewTitle(board.title);
-    setNewDescription(board.description || '');
-    setModalVisible(true);
-  };
-
-  const updateBoard = async () => {
-    if (!selectedBoard) return;
-
     try {
       const token = await AsyncStorage.getItem('token');
-      await axios.put(`https://marty-consistorian-untemporally.ngrok-free.dev/api/boards/${selectedBoard.id}`, {
-        title: newTitle,
-        description: newDescription
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      Alert.alert('Sucesso!', 'Quadro atualizado!');
+      await axios.post(
+        `${baseURL}/api/boards`,
+        { title: newBoardTitle, description: newBoardDesc },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setNewBoardTitle('');
+      setNewBoardDesc('');
       setModalVisible(false);
       fetchBoards();
-    } catch (error) {
-      console.log('Erro ao atualizar quadro:', error.response?.data || error.message);
-      Alert.alert('Erro', error.response?.data?.error || 'Falha ao atualizar');
+      Alert.alert('Sucesso', 'Quadro criado!');
+    } catch (err) {
+      Alert.alert('Erro', 'Falha ao criar quadro');
     }
   };
 
-  const handleDeleteBoard = async (boardId) => {
-    Alert.alert(
-      'Excluir quadro',
-      'Tem certeza que deseja excluir este quadro e todo o seu conteúdo?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const token = await AsyncStorage.getItem('token');
-              await axios.delete(`https://marty-consistorian-untemporally.ngrok-free.dev/api/boards/${boardId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              Alert.alert('Sucesso', 'Quadro excluído!');
-              fetchBoards();
-            } catch (error) {
-              console.log('Erro ao excluir quadro:', error.response?.data || error.message);
-              Alert.alert('Erro', error.response?.data?.error || 'Falha ao excluir quadro');
-            }
-          },
+  const deleteBoard = async (id) => {
+    Alert.alert('Excluir quadro', 'Tem certeza?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const token = await AsyncStorage.getItem('token');
+            await axios.delete(`${baseURL}/api/boards/${id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            fetchBoards();
+            Alert.alert('Sucesso', 'Quadro excluído');
+          } catch (err) {
+            Alert.alert('Erro', 'Falha ao excluir');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
-
 
   return (
     <View style={styles.container}>
@@ -108,65 +84,144 @@ const TasksScreen = ({ navigation }) => {
         data={boards}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.item}>
+          <View style={styles.boardCard}>
+            {/* Título clicável – abre detalhes */}
             <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('BoardDetailsScreen', {
-                  boardId: item.id,
-                  boardDescription: item.description,
-                })
-              }
+              style={{ paddingVertical: 10 }}
+              onPress={() => navigation.navigate('BoardDetailsScreen', {
+                boardId: item.id,
+                boardDescription: item.description,
+              })}
             >
               <Text style={styles.boardTitle}>{item.title}</Text>
             </TouchableOpacity>
 
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            {/* Botões editar e excluir – fora do TouchableOpacity grande */}
+            <View style={styles.buttons}>
+              {/* EDITAR */}
               <TouchableOpacity
                 style={styles.editButton}
-                onPress={() => openEditModal(item)}
+                onPress={() => {
+                  setSelectedBoardId(item.id);
+                  setEditModalTitle(item.title);
+                  setEditModalDesc(item.description || '');
+                  setEditModalVisible(true);
+                }}
               >
-                <Text style={styles.editText}>Editar</Text>
+                <Ionicons name="pencil" size={20} color="#1976D2" />
               </TouchableOpacity>
 
+              {/* EXCLUIR */}
               <TouchableOpacity
                 style={styles.deleteButton}
-                onPress={() => handleDeleteBoard(item.id)}
+                onPress={() => deleteBoard(item.id)}
               >
-                <Text style={styles.deleteText}>Excluir</Text>
+                <Ionicons name="trash" size={20} color="#D32F2F" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Descrição */}
+            {item.description ? (
+              <Text style={styles.boardDesc}>{item.description}</Text>
+            ) : (
+              <Text style={styles.noDesc}>Sem descrição</Text>
+            )}
+          </View>
+        )}
+        ListEmptyComponent={<Text style={styles.empty}>Nenhum quadro ainda. Crie o primeiro!</Text>}
+      />
+
+      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+        <Ionicons name="add" size={30} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Modal Criar Quadro */}
+      <Modal visible={modalVisible} transparent animationType="slide">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Novo Quadro</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nome do quadro"
+              value={newBoardTitle}
+              onChangeText={setNewBoardTitle}
+            />
+            <TextInput
+              style={[styles.input, { height: 80 }]}
+              placeholder="Descrição (opcional)"
+              value={newBoardDesc}
+              onChangeText={setNewBoardDesc}
+              multiline
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+                <Text style={styles.cancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.createButton} onPress={createBoard}>
+                <Text style={styles.createText}>Criar</Text>
               </TouchableOpacity>
             </View>
           </View>
-        )}
-      />
-
-
-      <TouchableOpacity style={styles.button} onPress={createBoard}>
-        <Text style={styles.buttonText}>Criar Novo Quadro</Text>
-      </TouchableOpacity>
-
-      {/* Modal de edição */}
-      <Modal visible={modalVisible} animationType="slide" transparent={true}>
+        </KeyboardAvoidingView>
+      </Modal>
+      {/* Modal Editar Quadro */}
+      <Modal visible={editModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Editar Quadro</Text>
+
             <TextInput
               style={styles.input}
-              placeholder="Novo título"
-              value={newTitle}
-              onChangeText={setNewTitle}
+              placeholder="Nome do quadro"
+              value={editModalTitle}
+              onChangeText={setEditModalTitle}
+              autoFocus
             />
+
             <TextInput
-              style={styles.input}
-              placeholder="Descrição"
-              value={newDescription}
-              onChangeText={setNewDescription}
+              style={[styles.input, { height: 100 }]}
+              placeholder="Descrição (opcional)"
+              value={editModalDesc}
+              onChangeText={setEditModalDesc}
+              multiline
             />
-          <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.saveButton} onPress={updateBoard}>
-                <Text style={styles.buttonText}>Salvar</Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setEditModalVisible(false)}
+              >
+                <Text style={styles.cancelText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-                <Text style={styles.buttonText}>Cancelar</Text>
+
+              <TouchableOpacity
+                style={styles.createButton}
+                onPress={async () => {
+                  if (!editModalTitle.trim()) {
+                    Alert.alert('Erro', 'O nome do quadro é obrigatório');
+                    return;
+                  }
+
+                  try {
+                    const token = await AsyncStorage.getItem('token');
+                    await axios.put(`${baseURL}/api/boards/${sekectedBoardId}`,
+                      {
+                        title: editModalTitle,
+                        description: editModalDesc,
+                      },
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
+
+                    setEditModalVisible(false);
+                    fetchBoards();
+                    Alert.alert('Sucesso', 'Quadro atualizado!');
+                  } catch (err) {
+                    console.log(err.response?.data || err.message);
+                    Alert.alert('Erro', 'Falha ao salvar alterações');
+                  }
+                }}
+              >
+                <Text style={styles.createText}>Salvar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -177,77 +232,54 @@ const TasksScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-  item: { 
-    padding: 10, 
-    borderBottomWidth: 1, 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center' 
+  container: { flex: 1, backgroundColor: '#f0f2f5', padding: 15 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#1976D2', marginBottom: 20 },
+  boardCard: {
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
-  boardTitle: { fontSize: 16 },
-  button: {
+  boardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  boardTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  buttons: { flexDirection: 'row', gap: 10 },
+  editButton: { padding: 5 },
+  deleteButton: { padding: 5 },
+  boardDesc: { color: '#666', marginTop: 5 },
+  noDesc: { color: '#999', fontStyle: 'italic', marginTop: 5 },
+  empty: { textAlign: 'center', color: '#999', fontSize: 16, marginTop: 50 },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 30,
     backgroundColor: '#4CAF50',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  editButton: {
-    backgroundColor: '#2196F3',
-    padding: 8,
-    borderRadius: 5,
-  },
-  editText: { color: '#fff', fontWeight: 'bold' },
-
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 8,
   },
-  modalContainer: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    width: '80%',
-    elevation: 10,
-  },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: '#fff', padding: 20, borderRadius: 16, width: '85%', elevation: 10 },
+  modalTitle: { fontSize: 22, fontWeight: 'bold', color: '#1976D2', marginBottom: 15, textAlign: 'center' },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 12,
     marginBottom: 15,
+    backgroundColor: '#f9f9f9',
   },
-  modalButtons: { flexDirection: 'row', 
-    justifyContent: 'space-between', 
-  },
-  saveButton: { backgroundColor: '#4CAF50', 
-    padding: 10, 
-    borderRadius: 8, 
-    width: '45%', 
-    alignItems: 'center',
-   },
-  cancelButton: { backgroundColor: '#f44336', 
-    padding: 10, 
-    borderRadius: 8, 
-    width: '45%', 
-    alignItems: 'center', 
-  },
-  deleteButton: {
-  backgroundColor: '#f44336',
-  padding: 8,
-  borderRadius: 5,
-},
-  deleteText: { color: '#fff', 
-    fontWeight: 'bold', 
-  },
-
+  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  cancelButton: { backgroundColor: '#ccc', padding: 12, borderRadius: 10, flex: 1, marginRight: 10, alignItems: 'center' },
+  cancelText: { color: '#333', fontWeight: 'bold' },
+  createButton: { backgroundColor: '#4CAF50', padding: 12, borderRadius: 10, flex: 1, marginLeft: 10, alignItems: 'center' },
+  createText: { color: '#fff', fontWeight: 'bold' },
 });
 
 export default TasksScreen;
