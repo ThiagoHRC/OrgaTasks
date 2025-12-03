@@ -11,8 +11,10 @@ const BoardDetailsScreen = ({ route }) => {
   const [lists, setLists] = useState([]);
   const [newListTitle, setNewListTitle] = useState('');
   const [newCardTitles, setNewCardTitles] = useState({});
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [selectedCardId, setSelectedCardId] = useState(null);
 
-  const baseURL = 'http://192.168.1.73:3001';
+  const baseURL = 'https://marty-consistorian-untemporally.ngrok-free.dev'; // Colocar o IP do seu servidor aqui
 
   const fetchLists = async () => {
     try {
@@ -140,176 +142,225 @@ const BoardDetailsScreen = ({ route }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.boardTitle}>Quadro</Text>
-      <Text style={styles.description}>{boardDescription || 'Sem descrição.'}</Text>
+      <View style={styles.container}>
+        <Text style={styles.boardTitle}>Quadro</Text>
+        <Text style={styles.description}>{boardDescription || 'Sem descrição.'}</Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {lists.map((list) => (
-          <View key={list.id} style={styles.list}>
-            {list.isEditing ? (
-              <TextInput
-                style={styles.editInput}
-                value={list.title}
-                onChangeText={(text) => {
-                  const updatedLists = lists.map((l) =>
-                    l.id === list.id ? { ...l, title: text } : l
-                  );
-                  setLists(updatedLists);
-                }}
-                onBlur={async () => {
-                  try {
-                    const token = await AsyncStorage.getItem('token');
-                    await axios.put(`${baseURL}/api/lists/${list.id}`, 
-                      { title: list.title },
-                      { headers: { Authorization: `Bearer ${token}` } }
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {lists.map((list) => (
+            <View key={list.id} style={styles.list}>
+              {list.isEditing ? (
+                <TextInput
+                  style={styles.editInput}
+                  value={list.title}
+                  onChangeText={(text) => {
+                    const updatedLists = lists.map((l) =>
+                      l.id === list.id ? { ...l, title: text } : l
                     );
+                    setLists(updatedLists);
+                  }}
+                  onBlur={async () => {
+                    try {
+                      const token = await AsyncStorage.getItem('token');
+                      await axios.put(`${baseURL}/api/lists/${list.id}`, 
+                        { title: list.title },
+                        { headers: { Authorization: `Bearer ${token}` } }
+                      );
+                      setLists((prev) =>
+                        prev.map((l) =>
+                          l.id === list.id ? { ...l, isEditing: false } : l
+                        )
+                      );
+                    } catch {
+                      Alert.alert('Erro', 'Falha ao atualizar título da lista');
+                    }
+                  }}
+                />
+              ) : (
+                <TouchableOpacity
+                  onLongPress={() => {
                     setLists((prev) =>
                       prev.map((l) =>
-                        l.id === list.id ? { ...l, isEditing: false } : l
+                        l.id === list.id ? { ...l, isEditing: true } : l
                       )
                     );
-                  } catch {
-                    Alert.alert('Erro', 'Falha ao atualizar título da lista');
-                  }
-                }}
-              />
-            ) : (
-              <TouchableOpacity
-                onLongPress={() => {
-                  setLists((prev) =>
-                    prev.map((l) =>
-                      l.id === list.id ? { ...l, isEditing: true } : l
-                    )
-                  );
-                }}
-              >
-                <Text style={styles.listTitle}>{list.title}</Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Botão de excluir lista */}
-            <TouchableOpacity
-              style={styles.deleteListButton}
-              onPress={() => handleDeleteList(list.id)}
-            >
-              <Text style={styles.deleteText}>🗑️ Excluir Lista</Text>
-            </TouchableOpacity>
-
-            <DraggableFlatList
-              data={list.cards}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item: card, drag, isActive }) => (
-                <TouchableOpacity
-                  onLongPress={drag}
-                  disabled={isActive}
-                  style={[
-                    styles.card,
-                    { backgroundColor: isActive ? '#d0d0d0' : '#eaeaea' },
-                  ]}
+                  }}
                 >
-                  {card.isEditing ? (
-                    <TextInput
-                      style={styles.editInput}
-                      value={card.title}
-                      onChangeText={(text) => {
-                        const updatedLists = lists.map((l) =>
-                          l.id === list.id
-                            ? {
-                                ...l,
-                                cards: l.cards.map((c) =>
-                                  c.id === card.id ? { ...c, title: text } : c
-                                ),
-                              }
-                            : l
-                        );
-                        setLists(updatedLists);
-                      }}
-                      onBlur={async () => {
-                        try {
-                          const token = await AsyncStorage.getItem('token');
-                          await axios.put(`${baseURL}/api/cards/${card.id}`,
-                            { title: card.title },
-                            { headers: { Authorization: `Bearer ${token}` } }
-                          );
-                          fetchLists();
-                        } catch {
-                          Alert.alert('Erro', 'Falha ao atualizar card');
-                        }
-                      }}
-                    />
-                  ) : (
-                    <TouchableOpacity
-                      onLongPress={() => {
-                        const updatedLists = lists.map((l) =>
-                          l.id === list.id
-                            ? {
-                                ...l,
-                                cards: l.cards.map((c) =>
-                                  c.id === card.id ? { ...c, isEditing: true } : c
-                                ),
-                              }
-                            : l
-                        );
-                        setLists(updatedLists);
-                      }}
-                    >
-                      <Text>{card.title}</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  <TouchableOpacity
-                    onPress={() => handleDeleteCard(card.id)}
-                    style={styles.deleteCardButton}
-                  >
-                    <Text style={styles.deleteText}>Excluir Card</Text>
-                  </TouchableOpacity>
+                  <Text style={styles.listTitle}>{list.title}</Text>
                 </TouchableOpacity>
               )}
-              onDragEnd={({ data }) => {
-                const updatedCards = data.map((card, index) => ({ ...card, position: index })); // Atualiza posições
-                const updatedLists = lists.map((l) =>
-                  l.id === list.id ? { ...l, cards: updatedCards } : l
-                );
-                setLists(updatedLists); // Atualiza estado local
 
-                // Salva no DB
-                saveCardPositions(updatedCards, list.id);
-              }}
-            />
+              {/* Botão de excluir lista */}
+              <TouchableOpacity
+                style={styles.deleteListButton}
+                onPress={() => handleDeleteList(list.id)}
+              >
+                <Text style={styles.deleteText}>🗑️ Excluir Lista</Text>
+              </TouchableOpacity>
+
+              <DraggableFlatList
+                data={list.cards}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item: card, drag, isActive }) => (
+                  <TouchableOpacity
+                    onLongPress={drag}
+                    disabled={isActive}
+                    style={[
+                      styles.card,
+                      { backgroundColor: isActive ? '#d0d0d0' : '#eaeaea' },
+                    ]}
+                  >
+                  <TouchableOpacity
+                    style={styles.moveButton}
+                    onPress={() => {
+                      setSelectedCardId(card.id);
+                      setShowMoveModal(true);
+                    }}
+                  >
+                    <Text style={styles.moveButtonText}>Mover →</Text>
+                  </TouchableOpacity>
+                    {card.isEditing ? (
+                      <TextInput
+                        style={styles.editInput}
+                        value={card.title}
+                        onChangeText={(text) => {
+                          const updatedLists = lists.map((l) =>
+                            l.id === list.id
+                              ? {
+                                  ...l,
+                                  cards: l.cards.map((c) =>
+                                    c.id === card.id ? { ...c, title: text } : c
+                                  ),
+                                }
+                              : l
+                          );
+                          setLists(updatedLists);
+                        }}
+                        onBlur={async () => {
+                          try {
+                            const token = await AsyncStorage.getItem('token');
+                            await axios.put(`${baseURL}/api/cards/${card.id}`,
+                              { title: card.title },
+                              { headers: { Authorization: `Bearer ${token}` } }
+                            );
+                            fetchLists();
+                          } catch {
+                            Alert.alert('Erro', 'Falha ao atualizar card');
+                          }
+                        }}
+                      />
+                    ) : (
+                      <TouchableOpacity
+                        onLongPress={() => {
+                          const updatedLists = lists.map((l) =>
+                            l.id === list.id
+                              ? {
+                                  ...l,
+                                  cards: l.cards.map((c) =>
+                                    c.id === card.id ? { ...c, isEditing: true } : c
+                                  ),
+                                }
+                              : l
+                          );
+                          setLists(updatedLists);
+                        }}
+                      >
+                        <Text>{card.title}</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                      onPress={() => handleDeleteCard(card.id)}
+                      style={styles.deleteCardButton}
+                    >
+                      <Text style={styles.deleteText}>Excluir Card</Text>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                )}
+                onDragEnd={({ data }) => {
+                  const updatedCards = data.map((card, index) => ({ ...card, position: index })); // Atualiza posições
+                  const updatedLists = lists.map((l) =>
+                    l.id === list.id ? { ...l, cards: updatedCards } : l
+                  );
+                  setLists(updatedLists); // Atualiza estado local
+
+                  // Salva no DB
+                  saveCardPositions(updatedCards, list.id);
+                }}
+              />
 
 
+              <TextInput
+                style={styles.input}
+                placeholder="Novo card..."
+                value={newCardTitles[list.id] || ''}
+                onChangeText={(text) =>
+                  setNewCardTitles((prev) => ({ ...prev, [list.id]: text }))
+                }
+              />
+              <TouchableOpacity
+                style={styles.addCardButton}
+                onPress={() => createCard(list.id)}
+              >
+                <Text style={styles.addCardText}>+ Adicionar Card</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          {/* Adicionar nova lista */}
+          <View style={styles.newListContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Novo card..."
-              value={newCardTitles[list.id] || ''}
-              onChangeText={(text) =>
-                setNewCardTitles((prev) => ({ ...prev, [list.id]: text }))
-              }
+              placeholder="Nova lista..."
+              value={newListTitle}
+              onChangeText={setNewListTitle}
             />
-            <TouchableOpacity
-              style={styles.addCardButton}
-              onPress={() => createCard(list.id)}
-            >
-              <Text style={styles.addCardText}>+ Adicionar Card</Text>
+            <TouchableOpacity style={styles.addListButton} onPress={createList}>
+              <Text style={styles.addListText}>+ Criar Lista</Text>
             </TouchableOpacity>
           </View>
-        ))}
-
-        {/* Adicionar nova lista */}
-        <View style={styles.newListContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Nova lista..."
-            value={newListTitle}
-            onChangeText={setNewListTitle}
-          />
-          <TouchableOpacity style={styles.addListButton} onPress={createList}>
-            <Text style={styles.addListText}>+ Criar Lista</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+        {/* Modal de mover card */}
+              {showMoveModal && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Mover card para:</Text>
+              {lists.map((list) => (
+                <TouchableOpacity
+                  key={list.id}
+                  style={styles.modalItem}
+                  onPress={async () => {
+                    try {
+                      const token = await AsyncStorage.getItem('token');
+                      await axios.patch(
+                        `${baseURL}/api/cards/move`,
+                        {
+                          cardId: selectedCardId,
+                          targetListId: list.id,
+                        },
+                        { headers: { Authorization: `Bearer ${token}` } }
+                      );
+                      setShowMoveModal(false);
+                      fetchLists();
+                      Alert.alert('Sucesso', 'Card movido!');
+                    } catch (err) {
+                      Alert.alert('Erro', 'Falha ao mover card');
+                    }
+                  }}
+                >
+                  <Text style={styles.modalItemText}>{list.title}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={styles.modalClose}
+                onPress={() => setShowMoveModal(false)}
+              >
+                <Text style={styles.modalCloseText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
   );
 };
 
@@ -406,6 +457,33 @@ const styles = StyleSheet.create({
   deleteText: { color: 'red', 
     fontWeight: 'bold', 
   },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  modalItem: { padding: 10, borderBottomWidth: 1, borderColor: '#ddd' },
+  modalItemText: { fontSize: 16 },
+  modalClose: { marginTop: 10, alignItems: 'center' },
+  modalCloseText: { color: 'red', fontWeight: 'bold' },
+  moveButton: { marginTop: 5, alignSelf: 'flex-end' },
+  moveButtonText: { color: '#2196F3', fontWeight: 'bold' },
 });
 
 export default BoardDetailsScreen;
